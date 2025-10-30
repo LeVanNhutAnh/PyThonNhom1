@@ -1,0 +1,2218 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>AI Assistant - ChatGPT Style</title>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <style>
+    /* ===================================
+       CSS VARIABLES - Design Tokens
+       =================================== */
+    :root {
+      /* Color Palette */
+      --bg: #0f1724;              /* Background chính - Xanh đen tối */
+      --panel: #1a1f2e;           /* Panel/card - Xanh đen nhạt hơn */
+      --sidebar: #0b1220;         /* Sidebar - Xanh đen đậm nhất */
+      --ai-bubble: #10b981;       /* Màu bubble AI - Xanh lá */
+      --user-bubble: #2563eb;     /* Màu bubble User - Xanh dương */
+      --muted: #94a3b8;           /* Text phụ - Xám xanh */
+      --accent: #7c3aed;          /* Màu nhấn - Tím */
+      --border: rgba(255, 255, 255, 0.05);  /* Đường viền mờ */
+      
+      /* Typography */
+      font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    /* ===================================
+       RESET & BASE STYLES
+       =================================== */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      height: 100%;
+      background: var(--bg);
+      color: #e6eef8;
+      overflow: hidden;
+    }
+
+    /* ===================================
+       LAYOUT - Main Container
+       =================================== */
+    .app {
+      display: flex;
+      height: 100vh;
+    }
+
+    /* ===================================
+       SIDEBAR - Left Navigation Panel
+       =================================== */
+    .sidebar {
+      width: 280px;
+      background: var(--sidebar);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      padding: 16px;
+    }
+
+    .sidebar-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      margin-bottom: 20px;
+    }
+
+    .sidebar-header h1 {
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    /* Nút tạo cuộc trò chuyện mới */
+    .new-chat-btn {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      border-radius: 10px;
+      background: var(--accent);
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+      width: 100%;
+      margin-bottom: 16px;
+      transition: all 0.2s ease;
+    }
+
+    .new-chat-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(124, 58, 237, 0.4);
+    }
+
+    /* Tiêu đề section */
+    .section-title {
+      font-size: 12px;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin: 20px 0 10px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    /* Danh sách lịch sử */
+    .history-list {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .history-item {
+      padding: 10px 12px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.02);
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.2s ease;
+      border: 1px solid transparent;
+    }
+
+    .history-item:hover {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: var(--border);
+    }
+
+    .history-item-title {
+      font-weight: 500;
+      margin-bottom: 4px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .history-item-time {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    /* ===================================
+       MAIN CHAT AREA - Right Panel
+       =================================== */
+    .chat-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    /* Header của chat */
+    .chat-header {
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .chat-header h2 {
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .icon-btn {
+      padding: 8px 12px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .icon-btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: white;
+    }
+
+    /* Khu vực hiển thị tin nhắn */
+    .messages-area {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* ===================================
+       MESSAGE BUBBLES - Chat Messages
+       =================================== */
+    .message {
+      display: flex;
+      gap: 12px;
+      max-width: 85%;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .message.from-user {
+      align-self: flex-end;
+      flex-direction: row-reverse;
+    }
+
+    /* Avatar */
+    .avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+
+    .avatar.ai {
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: white;
+    }
+
+    .avatar.user {
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      color: white;
+    }
+
+    /* Nội dung tin nhắn */
+    .message-content {
+      flex: 1;
+    }
+
+    .message-bubble {
+      padding: 12px 16px;
+      border-radius: 12px;
+      line-height: 1.6;
+      font-size: 15px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    }
+
+    .message.from-ai .message-bubble {
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.2);
+    }
+
+    .message.from-user .message-bubble {
+      background: rgba(37, 99, 235, 0.1);
+      border: 1px solid rgba(37, 99, 235, 0.2);
+    }
+
+    /* Metadata và actions */
+    .message-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 6px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .message-actions {
+      display: flex;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    .message-actions button {
+      padding: 4px 10px;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 12px;
+      transition: all 0.2s ease;
+    }
+
+    .message-actions button:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: white;
+    }
+
+    /* ===================================
+       TYPING INDICATOR - AI Đang trả lời
+       =================================== */
+    .typing-indicator {
+      display: flex;
+      gap: 4px;
+      padding: 8px;
+    }
+
+    .typing-indicator span {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--muted);
+      animation: bounce 1.4s infinite ease-in-out;
+    }
+
+    .typing-indicator span:nth-child(1) {
+      animation-delay: -0.32s;
+    }
+
+    .typing-indicator span:nth-child(2) {
+      animation-delay: -0.16s;
+    }
+
+    @keyframes bounce {
+      0%, 80%, 100% {
+        transform: scale(0);
+      }
+      40% {
+        transform: scale(1);
+      }
+    }
+
+    /* ===================================
+       INPUT AREA - Khu vực nhập tin nhắn
+       =================================== */
+    .input-area {
+      padding: 20px 24px;
+      border-top: 1px solid var(--border);
+      background: var(--panel);
+    }
+
+    .input-container {
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;
+    }
+
+    /* Các nút action (Hỏi đáp, Dịch, Tóm tắt...) */
+    .input-actions {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .action-btn {
+      padding: 8px 14px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .action-btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: white;
+      border-color: var(--accent);
+    }
+
+    .action-btn.active {
+      background: var(--accent);
+      color: white;
+      border-color: var(--accent);
+    }
+
+    /* Textarea nhập tin nhắn */
+    textarea {
+      flex: 1;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border);
+      padding: 12px 16px;
+      border-radius: 12px;
+      color: inherit;
+      font-size: 15px;
+      min-height: 52px;
+      max-height: 200px;
+      resize: none;
+      font-family: inherit;
+      transition: all 0.2s ease;
+    }
+
+    textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
+    }
+
+    textarea::placeholder {
+      color: var(--muted);
+    }
+
+    /* Nhóm nút gửi và micro */
+    .send-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    /* Nút micro ghi âm */
+    .mic-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+    }
+
+    .mic-btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: white;
+    }
+
+    .mic-btn.recording {
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+      color: white;
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        transform: scale(1);
+      }
+      50% {
+        transform: scale(1.05);
+      }
+    }
+
+    /* Nút gửi tin nhắn */
+    .send-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      background: var(--accent);
+      color: white;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+    }
+
+    .send-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(124, 58, 237, 0.4);
+    }
+
+    .send-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* ===================================
+       NOTIFICATION - Thông báo Toast
+       =================================== */
+    .notification {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: var(--accent);
+      color: white;
+      padding: 12px 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      z-index: 2000;
+      animation: slideIn 0.3s ease;
+    }
+
+    @keyframes slideIn {
+      from {
+        transform: translateX(100%);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+
+    /* ===================================
+       MODAL - Popup Windows
+       =================================== */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.7);
+      z-index: 3000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal.active {
+      display: flex;
+    }
+
+    .modal-content {
+      background: var(--panel);
+      border-radius: 16px;
+      padding: 0;
+      max-width: 600px;
+      width: 90%;
+      max-height: 85vh;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+      animation: modalIn 0.3s ease;
+    }
+
+    @keyframes modalIn {
+      from {
+        opacity: 0;
+        transform: scale(0.9);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    /* Modal Header */
+    .modal-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .modal-header h3 {
+      font-size: 18px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .modal-close {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+    }
+
+    .modal-close:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: white;
+    }
+
+    /* Modal Body */
+    .modal-body {
+      padding: 24px;
+      overflow-y: auto;
+      max-height: calc(85vh - 140px);
+    }
+
+    /* Settings Group trong Modal */
+    .settings-group {
+      margin-bottom: 24px;
+    }
+
+    .settings-group:last-child {
+      margin-bottom: 0;
+    }
+
+    .settings-label {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      display: block;
+      color: #e6eef8;
+    }
+
+    .settings-description {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 10px;
+      line-height: 1.5;
+    }
+
+    .settings-select {
+      width: 100%;
+      padding: 10px 14px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border);
+      color: inherit;
+      font-size: 14px;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    .settings-select:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .settings-input {
+      width: 100%;
+      padding: 10px 14px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border);
+      color: inherit;
+      font-size: 14px;
+      font-family: inherit;
+    }
+
+    .settings-input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    /* Toggle Switch */
+    .settings-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 0;
+    }
+
+    .toggle-switch {
+      position: relative;
+      width: 48px;
+      height: 26px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 13px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .toggle-switch.active {
+      background: var(--accent);
+    }
+
+    .toggle-switch::after {
+      content: '';
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 20px;
+      height: 20px;
+      background: white;
+      border-radius: 50%;
+      transition: all 0.3s ease;
+    }
+
+    .toggle-switch.active::after {
+      left: 25px;
+    }
+
+    /* Modal Footer */
+    .modal-footer {
+      padding: 16px 24px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+
+    .modal-btn {
+      padding: 10px 20px;
+      border-radius: 8px;
+      border: none;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .modal-btn.primary {
+      background: var(--accent);
+      color: white;
+    }
+
+    .modal-btn.primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(124, 58, 237, 0.4);
+    }
+
+    .modal-btn.secondary {
+      background: rgba(255, 255, 255, 0.03);
+      color: var(--muted);
+      border: 1px solid var(--border);
+    }
+
+    .modal-btn.secondary:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: white;
+    }
+
+    /* ===================================
+       RESPONSIVE - Mobile Optimization
+       =================================== */
+    @media (max-width: 768px) {
+      .sidebar {
+        display: none;
+      }
+      
+      .message {
+        max-width: 95%;
+      }
+      
+      .input-actions {
+        gap: 4px;
+      }
+      
+      .action-btn {
+        padding: 6px 10px;
+        font-size: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <i class="fas fa-robot" style="font-size:24px;color:var(--accent)"></i>
+        <h1>AI Assistant</h1>
+      </div>
+      
+      <button class="new-chat-btn" onclick="app.newChat()">
+        <i class="fas fa-plus"></i>
+        Cuộc trò chuyện mới
+      </button>
+      
+      <div class="section-title" style="display:flex;align-items:center;justify-content:space-between">
+        <span>Lịch sử gần đây</span>
+        <button onclick="app.clearAllHistory()" style="background:none;border:none;color:var(--muted);cursor:pointer;padding:4px 8px;font-size:11px;border-radius:4px;transition:all 0.2s" title="Xóa toàn bộ lịch sử">
+          <i class="fas fa-trash"></i>
+        </button>
+      </div>
+      <div class="history-list" id="historyList">
+        <div style="text-align:center;color:var(--muted);padding:20px;font-size:13px">
+          Chưa có lịch sử
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Chat -->
+    <div class="chat-container">
+      <header class="chat-header">
+        <h2><i class="fas fa-comments"></i> Trò chuyện với AI</h2>
+        <div class="header-actions">
+          <button class="icon-btn" onclick="window.location.href='/'" title="Về trang chính">
+            <i class="fas fa-home"></i>
+          </button>
+          <button class="icon-btn" onclick="app.openHistory()" title="Lịch sử">
+            <i class="fas fa-history"></i>
+          </button>
+          <button class="icon-btn" onclick="app.openSettings()" title="Cài đặt">
+            <i class="fas fa-cog"></i>
+          </button>
+          <button class="icon-btn" onclick="app.exportChat()" title="Xuất cuộc trò chuyện">
+            <i class="fas fa-download"></i>
+          </button>
+          <button class="icon-btn" onclick="app.clearChat()" title="Xóa cuộc trò chuyện">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
+      </header>
+
+      <div class="messages-area" id="messagesArea">
+        <div class="message from-ai">
+          <div class="avatar ai"><i class="fas fa-robot"></i></div>
+          <div class="message-content">
+            <div class="message-bubble">
+              Xin chào! Tôi là trợ lý AI thông minh với giao diện ChatGPT. Tôi có thể:<br><br>
+              <strong>🎤 Speech-to-Text:</strong> Chuyển đổi giọng nói thành văn bản<br>
+              <strong>💬 Hỏi đáp:</strong> Trả lời câu hỏi và tư vấn<br>
+              <strong>🌐 Dịch thuật:</strong> Dịch sang nhiều ngôn ngữ<br>
+              <strong>📝 Tóm tắt:</strong> Tóm tắt văn bản dài<br>
+              <strong>✨ Cải thiện:</strong> Cải thiện ngữ pháp và văn phong<br>
+              <strong>📄 Upload file:</strong> Phân tích PDF, Word<br><br>
+              Hãy chọn chức năng bên dưới và bắt đầu!
+            </div>
+            <div class="message-meta">
+              <i class="fas fa-robot"></i> AI • Vừa xong
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="input-area">
+        <div class="input-actions">
+          <button class="action-btn active" onclick="app.setMode('question')" data-mode="question">
+            <i class="fas fa-comment-dots"></i> Hỏi đáp
+          </button>
+          <button class="action-btn" onclick="app.setMode('translate')" data-mode="translate">
+            <i class="fas fa-language"></i> Dịch
+          </button>
+          <button class="action-btn" onclick="app.fixPunctuation()" id="punctBtn">
+            <i class="fas fa-pen-nib"></i> Sửa dấu câu
+          </button>
+          <button class="action-btn" onclick="app.setMode('summarize')" data-mode="summarize">
+            <i class="fas fa-compress-alt"></i> Tóm tắt
+          </button>
+          <button class="action-btn" onclick="app.setMode('improve')" data-mode="improve">
+            <i class="fas fa-magic"></i> Cải thiện
+          </button>
+          <label class="action-btn" for="fileInput" style="cursor:pointer">
+            <i class="fas fa-file-upload"></i> Upload
+          </label>
+          <input type="file" id="fileInput" accept=".pdf,.doc,.docx" style="display:none">
+        </div>
+
+        <!-- Document Context Badge -->
+        <div id="documentBadge" style="display:none;padding:8px 12px;background:rgba(16,163,127,0.15);border:1px solid rgba(16,163,127,0.3);border-radius:8px;margin:8px 0;font-size:13px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+            <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;">
+              <i class="fas fa-file-alt" style="color:var(--accent);flex-shrink:0;"></i>
+              <span style="color:var(--text-secondary);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" id="documentName">Không có file</span>
+            </div>
+            <div style="display:flex;gap:6px;">
+              <button onclick="app.askAboutDocument()" style="background:var(--accent);color:white;border:none;padding:4px 12px;border-radius:6px;cursor:pointer;font-size:12px;transition:all 0.2s;display:flex;align-items:center;gap:4px;" title="Đặt câu hỏi về file này">
+                <i class="fas fa-question-circle"></i>
+                <span>Hỏi về file</span>
+              </button>
+              <button onclick="app.clearDocument()" style="background:rgba(239,68,68,0.2);color:#ef4444;border:none;padding:4px 8px;border-radius:6px;cursor:pointer;font-size:12px;transition:all 0.2s;" title="Đóng file">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <div class="input-container">
+          <textarea id="messageInput" placeholder="Nhập tin nhắn hoặc nhấn micro để ghi âm..." rows="1"></textarea>
+          <div class="send-group">
+            <button class="mic-btn" id="micBtn" title="Ghi âm">
+              <i class="fas fa-microphone"></i>
+            </button>
+            <button class="send-btn" id="sendBtn" title="Gửi">
+              <i class="fas fa-paper-plane"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div class="modal" id="settingsModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3><i class="fas fa-cog"></i> Cài đặt</h3>
+        <button class="modal-close" onclick="app.closeSettings()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="settings-group">
+          <label class="settings-label">Nhà cung cấp AI</label>
+          <div class="settings-description">Chọn AI để xử lý yêu cầu của bạn</div>
+          <select class="settings-select" id="aiProvider">
+            <option value="openai">OpenAI GPT-3.5 Turbo</option>
+            <option value="gemini">Google Gemini Pro</option>
+          </select>
+        </div>
+
+        <div class="settings-group">
+          <label class="settings-label">Ngôn ngữ ghi âm</label>
+          <div class="settings-description">Chọn ngôn ngữ cho chức năng Speech-to-Text</div>
+          <select class="settings-select" id="speechLang">
+            <option value="vi-VN">Tiếng Việt</option>
+            <option value="en-US">English (US)</option>
+            <option value="en-GB">English (UK)</option>
+            <option value="ja-JP">日本語 (Japanese)</option>
+            <option value="ko-KR">한국어 (Korean)</option>
+            <option value="zh-CN">中文 (Chinese)</option>
+            <option value="fr-FR">Français (French)</option>
+            <option value="de-DE">Deutsch (German)</option>
+          </select>
+        </div>
+
+        <div class="settings-group">
+          <label class="settings-label">Ghi âm liên tục</label>
+          <div class="settings-description">Tự động nhận dạng giọng nói liên tục khi bấm micro</div>
+          <div class="settings-toggle">
+            <span>Bật ghi âm liên tục</span>
+            <div class="toggle-switch" id="continuousToggle" onclick="app.toggleContinuous()"></div>
+          </div>
+        </div>
+
+        <div class="settings-group">
+          <label class="settings-label">Tự động gửi</label>
+          <div class="settings-description">Tự động gửi tin nhắn sau khi ghi âm kết thúc</div>
+          <div class="settings-toggle">
+            <span>Bật tự động gửi</span>
+            <div class="toggle-switch" id="autoSendToggle" onclick="app.toggleAutoSend()"></div>
+          </div>
+        </div>
+
+        <div class="settings-group">
+          <label class="settings-label">Chủ đề giao diện</label>
+          <div class="settings-description">Tùy chỉnh màu sắc giao diện</div>
+          <select class="settings-select" id="theme">
+            <option value="dark">Tối (Dark)</option>
+            <option value="darker">Tối hơn (Darker)</option>
+            <option value="blue">Xanh dương (Blue)</option>
+          </select>
+        </div>
+
+        <div class="settings-group">
+          <label class="settings-label">API Key OpenAI (Tùy chọn)</label>
+          <div class="settings-description">Nhập API key riêng để không giới hạn số lượng request</div>
+          <input type="password" class="settings-input" id="openaiKey" placeholder="sk-...">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="modal-btn secondary" onclick="app.closeSettings()">Hủy</button>
+        <button class="modal-btn primary" onclick="app.saveSettings()">Lưu cài đặt</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- History Modal -->
+  <div class="modal" id="historyModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3><i class="fas fa-history"></i> Lịch sử trò chuyện</h3>
+        <button class="modal-close" onclick="document.getElementById('historyModal').classList.remove('active')">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-body" id="historyModalBody">
+        <div style="margin-bottom:16px;display:flex;gap:10px;justify-content:flex-end">
+          <button class="modal-btn secondary" onclick="app.clearAllHistory()">
+            <i class="fas fa-trash"></i> Xóa toàn bộ
+          </button>
+          <button class="modal-btn primary" onclick="app.exportHistory()">
+            <i class="fas fa-download"></i> Xuất lịch sử
+          </button>
+        </div>
+        <div id="historyListDetailed" style="display:flex;flex-direction:column;gap:10px"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="modal-btn secondary" onclick="document.getElementById('historyModal').classList.remove('active')">Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    class AIAssistant {
+      constructor() {
+        this.messages = [];
+        this.currentMode = 'question';
+        this.isRecording = false;
+        this.recognition = null;
+        this.chatHistory = JSON.parse(localStorage.getItem('chatHistory') || '[]');
+        
+        // Lưu thông tin file đã upload
+        this.currentDocument = null; // {name, content, summary, analysis}
+        
+        // Settings
+        this.settings = JSON.parse(localStorage.getItem('chatSettings') || JSON.stringify({
+          aiProvider: 'openai',
+          speechLang: 'vi-VN',
+          continuous: true,
+          autoSend: false,
+          theme: 'dark',
+          openaiKey: ''
+        }));
+        
+        this.initElements();
+        this.initSpeechRecognition();
+        this.bindEvents();
+        this.loadHistory();
+        this.applySettings();
+        
+        console.log('AI Assistant initialized');
+      }
+
+      initElements() {
+        this.messagesArea = document.getElementById('messagesArea');
+        this.messageInput = document.getElementById('messageInput');
+        this.sendBtn = document.getElementById('sendBtn');
+        this.micBtn = document.getElementById('micBtn');
+        this.fileInput = document.getElementById('fileInput');
+        this.historyList = document.getElementById('historyList');
+      }
+
+      initSpeechRecognition() {
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+          const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+          this.recognition = new SpeechRecognition();
+          this.recognition.continuous = this.settings.continuous;
+          this.recognition.interimResults = true;
+          this.recognition.lang = this.settings.speechLang;
+          
+          this.recognition.onresult = (event) => {
+            let transcript = '';
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+              transcript += event.results[i][0].transcript;
+            }
+            this.messageInput.value = transcript;
+            
+            // Auto send if enabled and final result
+            if (this.settings.autoSend && event.results[event.results.length - 1].isFinal) {
+              setTimeout(() => this.sendMessage(), 500);
+            }
+          };
+          
+          this.recognition.onerror = (event) => {
+            console.error('Speech recognition error:', event.error);
+            this.stopRecording();
+            this.showNotification('Lỗi ghi âm: ' + event.error, 'error');
+          };
+          
+          this.recognition.onend = () => {
+            this.stopRecording();
+          };
+        }
+      }
+
+      bindEvents() {
+        this.sendBtn.addEventListener('click', () => this.sendMessage());
+        this.messageInput.addEventListener('keypress', (e) => {
+          if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            this.sendMessage();
+          }
+        });
+        
+        this.micBtn.addEventListener('click', () => this.toggleRecording());
+        this.fileInput.addEventListener('change', (e) => this.handleFileUpload(e));
+        
+        // Auto-resize textarea
+        this.messageInput.addEventListener('input', () => {
+          this.messageInput.style.height = 'auto';
+          this.messageInput.style.height = Math.min(this.messageInput.scrollHeight, 200) + 'px';
+        });
+      }
+
+      setMode(mode) {
+        this.currentMode = mode;
+        document.querySelectorAll('.action-btn[data-mode]').forEach(btn => {
+          btn.classList.toggle('active', btn.dataset.mode === mode);
+        });
+        
+        const placeholders = {
+          question: 'Nhập câu hỏi của bạn...',
+          translate: 'Nhập văn bản cần dịch sang tiếng Anh...',
+          summarize: 'Nhập văn bản cần tóm tắt...',
+          improve: 'Nhập văn bản cần cải thiện...'
+        };
+        this.messageInput.placeholder = placeholders[mode] || 'Nhập tin nhắn...';
+        this.messageInput.focus();
+      }
+
+      // Recording (Web Speech API) / Whisper flow will be handled here
+      toggleRecording() {
+        if (!this.recognition) {
+          // Fallback: try Whisper flow using MediaRecorder (if available)
+          this.startWhisperRecordingFallback();
+          return;
+        }
+
+        if (this.isRecording) {
+          this.stopRecording();
+        } else {
+          this.startRecording();
+        }
+      }
+
+      startRecording() {
+        try {
+          this.recognition.start();
+          this.isRecording = true;
+          this.micBtn.classList.add('recording');
+          this.micBtn.innerHTML = '<i class="fas fa-stop"></i>';
+          this.showNotification('🎤 Đang ghi âm...');
+        } catch (err) {
+          console.error('Start recording error', err);
+          this.showNotification('Lỗi khi bắt đầu ghi âm', 'error');
+        }
+      }
+
+      stopRecording() {
+        if (this.recognition && this.isRecording) {
+          try { this.recognition.stop(); } catch(e){}
+        }
+        this.isRecording = false;
+        this.micBtn.classList.remove('recording');
+        this.micBtn.innerHTML = '<i class="fas fa-microphone"></i>';
+      }
+
+      // Fallback Whisper flow using MediaRecorder -> POST /whisper-transcribe/
+      async startWhisperRecordingFallback() {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          this.mediaRecorder = new MediaRecorder(stream);
+          this.audioChunks = [];
+
+          this.mediaRecorder.ondataavailable = (e) => this.audioChunks.push(e.data);
+          this.mediaRecorder.onstop = async () => {
+            const blob = new Blob(this.audioChunks, { type: 'audio/webm' });
+            await this.sendToWhisper(blob);
+            stream.getTracks().forEach(t => t.stop());
+          };
+
+          this.mediaRecorder.start();
+          this.isRecording = true;
+          this.micBtn.classList.add('recording');
+          this.micBtn.innerHTML = '<i class="fas fa-stop"></i>';
+          this.showNotification('🎤 Đang ghi âm (Whisper fallback)...', 'info');
+        } catch (err) {
+          console.error('Whisper fallback error', err);
+          this.showNotification('Không thể truy cập micro', 'error');
+        }
+      }
+
+      async sendToWhisper(audioBlob) {
+        this.showNotification('Đang gửi audio đến Whisper (hoặc demo)...', 'info');
+        try {
+          const form = new FormData();
+          form.append('audio', audioBlob, 'recording.webm');
+          form.append('language', this.settings.speechLang || 'vi-VN');
+
+          const resp = await fetch('/whisper-transcribe/', { method: 'POST', body: form });
+          const data = await resp.json();
+          if (data.transcription) {
+            this.messageInput.value = (this.messageInput.value + ' ' + data.transcription).trim();
+            this.showNotification('✅ Whisper: nhận dạng xong');
+            if (this.settings.autoSend) this.sendMessage();
+          } else {
+            this.showNotification('Whisper trả về demo hoặc lỗi', 'warning');
+            if (data.transcription_demo) this.messageInput.value += ' ' + data.transcription_demo;
+          }
+        } catch (err) {
+          console.error('sendToWhisper error', err);
+          this.showNotification('Lỗi mạng khi gửi Whisper, dùng demo', 'warning');
+          this.messageInput.value += ' [Demo transcription]';
+        } finally {
+          this.isRecording = false;
+          this.micBtn.classList.remove('recording');
+          this.micBtn.innerHTML = '<i class="fas fa-microphone"></i>';
+        }
+      }
+
+      // Punctuation: call AI endpoint or fallback to local function
+      async fixPunctuation() {
+        const text = this.messageInput.value.trim();
+        if (!text) { this.showNotification('Không có văn bản để sửa chấm câu', 'error'); return; }
+
+        this.showNotification('Đang sửa chấm câu...');
+        try {
+          const resp = await fetch('/ai-chat/', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': this.getCSRFToken()},
+            body: JSON.stringify({ message: text, type: 'punctuation' })
+          });
+          const data = await resp.json();
+          if (data.response) {
+            const fixed = this.removeMarkdownSyntax(data.response.trim());
+            this.messageInput.value = fixed;
+            this.showNotification('✅ Đã sửa chấm câu bằng AI');
+          } else {
+            throw new Error('No response');
+          }
+        } catch (err) {
+          console.error('Punctuation AI error', err);
+          const local = this.addAutoPunctuation(text);
+          this.messageInput.value = local;
+          this.showNotification('⚠️ Dùng sửa chấm câu cục bộ', 'warning');
+        }
+      }
+
+      // Local punctuation helper (copied/simplified from home.html behavior)
+      addAutoPunctuation(text) {
+        if (!text) return text;
+        let processed = text.replace(/\s+/g, ' ').trim();
+        processed = processed.replace(/\s+([\.,\!\?])/g, '$1');
+        if (processed.length > 20 && !/[\.\!\?]$/.test(processed)) {
+          if (/\b(ai|gì|đâu|khi nào|thế nào|tại sao|vì sao|bao nhiêu|có phải không|sao)\b/gi.test(processed)) processed += '?';
+          else processed += '.';
+        }
+        processed = processed.replace(/([\.\!\?])\s+([a-zà-ỹ])/gi, (m,p1,p2) => p1 + ' ' + p2.toUpperCase());
+        return processed;
+      }
+
+      // History modal and actions
+      loadHistory() {
+        if (!this.chatHistory || this.chatHistory.length === 0) {
+          this.historyList.innerHTML = '<div style="text-align:center;color:var(--muted);padding:20px;font-size:13px">Chưa có lịch sử</div>';
+          return;
+        }
+
+        this.historyList.innerHTML = this.chatHistory.slice(0,20).map(h => `
+          <div class="history-item" data-id="${h.id}">
+            <div class="history-item-title">${this.escapeHtml(h.question || '...')}</div>
+            <div class="history-item-time">${h.time || ''}</div>
+            <div style="margin-top:6px;display:flex;gap:6px;">
+              <button onclick="app.viewHistory('${h.id}')">Xem</button>
+              <button onclick="app.copyHistory('${h.id}')">Sao chép</button>
+              <button onclick="app.deleteHistory('${h.id}')">Xóa</button>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      saveToHistory(question, answer) {
+        const item = { id: Date.now().toString(), question: question.substring(0,200), answer: answer.substring(0,500), time: new Date().toLocaleString('vi-VN') };
+        this.chatHistory.unshift(item);
+        if (this.chatHistory.length > 50) this.chatHistory = this.chatHistory.slice(0,50);
+        localStorage.setItem('aiChatHistory', JSON.stringify(this.chatHistory));
+        // keep legacy key
+        localStorage.setItem('chatHistory', JSON.stringify(this.chatHistory));
+        this.loadHistory();
+      }
+
+      viewHistory(id) {
+        const item = this.chatHistory.find(h => h.id === id);
+        if (!item) return this.showNotification('Không tìm thấy lịch sử', 'error');
+        this.addMessage(item.question, 'user');
+        this.addMessage(item.answer, 'ai');
+      }
+
+      copyHistory(id) {
+        const item = this.chatHistory.find(h => h.id === id);
+        if (!item) return;
+        navigator.clipboard.writeText(`Câu hỏi:\n${item.question}\n\nTrả lời:\n${item.answer}`);
+        this.showNotification('Đã sao chép lịch sử');
+      }
+
+      deleteHistory(id) {
+        if (!confirm('Bạn có chắc muốn xóa mục này?')) return;
+        this.chatHistory = this.chatHistory.filter(h => h.id !== id);
+        localStorage.setItem('aiChatHistory', JSON.stringify(this.chatHistory));
+        localStorage.setItem('chatHistory', JSON.stringify(this.chatHistory));
+        this.loadHistory();
+        this.showNotification('Đã xóa mục lịch sử');
+      }
+
+      clearAllHistory() {
+        if (!confirm('Bạn có chắc muốn xóa toàn bộ lịch sử?')) return;
+        this.chatHistory = [];
+        localStorage.setItem('aiChatHistory', JSON.stringify(this.chatHistory));
+        localStorage.setItem('chatHistory', JSON.stringify(this.chatHistory));
+        this.loadHistory();
+        document.getElementById('historyModal').classList.remove('active');
+        this.showNotification('Đã xóa toàn bộ lịch sử');
+      }
+
+      openHistory() {
+        // populate detailed list
+        const container = document.getElementById('historyListDetailed');
+        container.innerHTML = (this.chatHistory.length === 0) ? '<div style="text-align:center;color:var(--muted);padding:20px">Chưa có lịch sử</div>' : this.chatHistory.map((h, idx) => `
+          <div style="background:rgba(255,255,255,0.03);padding:12px;border-radius:8px">
+            <div style="font-weight:600">${this.escapeHtml(h.question)}</div>
+            <div style="color:var(--muted);font-size:12px;margin:6px 0">${h.time}</div>
+            <div style="white-space:pre-wrap;margin-top:6px">${this.escapeHtml(h.answer)}</div>
+            <div style="margin-top:8px;display:flex;gap:8px;justify-content:flex-end">
+              <button onclick="app.copyHistory('${h.id}')">Sao chép</button>
+              <button onclick="app.deleteHistory('${h.id}')">Xóa</button>
+            </div>
+          </div>
+        `).join('');
+
+        document.getElementById('historyModal').classList.add('active');
+      }
+
+      exportHistory() {
+        if (!this.chatHistory || this.chatHistory.length === 0) { this.showNotification('Không có lịch sử để xuất', 'error'); return; }
+        let text = '=== LỊCH SỬ TRÒ CHUYỆN ===\n\n';
+        this.chatHistory.forEach((h,i) => { text += `${i+1}. ${h.time}\nQ: ${h.question}\nA: ${h.answer}\n\n`; });
+        const blob = new Blob([text], { type: 'text/plain' });
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `history-${new Date().toISOString().split('T')[0]}.txt`; a.click();
+        this.showNotification('Đã xuất lịch sử');
+      }
+
+      // Save/Share/Export current chat
+      exportChat() {
+        if (!this.messages || this.messages.length <= 1) return this.showNotification('Không có nội dung để xuất', 'error');
+        let text = '=== CUỘC TRÒ CHUYỆN ===\n\n';
+        this.messages.forEach(m => { text += `${m.sender.toUpperCase()} (${m.time}):\n${m.content}\n\n`; });
+        const blob = new Blob([text], { type: 'text/plain' });
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `chat-${new Date().toISOString().split('T')[0]}.txt`; a.click();
+        this.showNotification('Đã xuất cuộc trò chuyện');
+      }
+
+      saveToFile() {
+        const text = this.messageInput.value.trim();
+        if (!text) return this.showNotification('Không có nội dung để lưu', 'error');
+        const blob = new Blob([text], { type: 'text/plain' });
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `text-${new Date().toISOString().split('T')[0]}.txt`; a.click();
+        this.showNotification('Đã lưu file');
+      }
+
+      shareText() {
+        const text = this.messageInput.value.trim();
+        if (!text) return this.showNotification('Không có nội dung để chia sẻ', 'error');
+        if (navigator.share) { navigator.share({ title: 'Chat text', text }).then(()=>this.showNotification('Đã chia sẻ')).catch(()=>this.copyToClipboard(text)); }
+        else this.copyToClipboard(text);
+      }
+
+      copyToClipboard(t) { navigator.clipboard.writeText(t).then(()=>this.showNotification('Đã sao chép')); }
+
+      // CSRF helper
+      getCSRFToken() {
+        const name = 'csrftoken';
+        const value = document.cookie.split(';').map(c=>c.trim()).find(c=>c.startsWith(name+'='));
+        return value ? decodeURIComponent(value.split('=')[1]) : '';
+      }
+
+      // Voice command processing (simple)
+      processVoiceCommands(text) {
+        const t = text.toLowerCase();
+        if (t.includes('gửi cho ai') || t.includes('hỏi ai')) { setTimeout(()=>this.sendMessage(),300); return true; }
+        if (t.includes('tóm tắt')) { setTimeout(()=>this.setMode('summarize'),300); return true; }
+        if (t.includes('dịch sang tiếng anh')) { setTimeout(()=>this.setMode('translate'),300); return true; }
+        if (t.includes('xóa lịch sử')) { setTimeout(()=>{ if(confirm('Xóa toàn bộ lịch sử?')){ this.chatHistory=[]; localStorage.setItem('aiChatHistory', JSON.stringify(this.chatHistory)); this.loadHistory(); } },300); return true; }
+        return false;
+      }
+
+      toggleRecording() {
+        if (!this.recognition) {
+          this.showNotification('Trình duyệt không hỗ trợ ghi âm', 'error');
+          return;
+        }
+        
+        if (this.isRecording) {
+          this.stopRecording();
+        } else {
+          this.startRecording();
+        }
+      }
+
+      startRecording() {
+        try {
+          this.recognition.start();
+          this.isRecording = true;
+          this.micBtn.classList.add('recording');
+          this.micBtn.innerHTML = '<i class="fas fa-stop"></i>';
+          this.showNotification('🎤 Đang ghi âm... Nói vào micro', 'info');
+        } catch (error) {
+          console.error('Error starting recording:', error);
+          this.showNotification('Lỗi khởi động ghi âm', 'error');
+        }
+      }
+
+      stopRecording() {
+        if (this.recognition && this.isRecording) {
+          this.recognition.stop();
+        }
+        this.isRecording = false;
+        this.micBtn.classList.remove('recording');
+        this.micBtn.innerHTML = '<i class="fas fa-microphone"></i>';
+      }
+
+      async sendMessage() {
+        const text = this.messageInput.value.trim();
+        if (!text) return;
+        
+        // Add user message
+        this.addMessage(text, 'user');
+        this.messageInput.value = '';
+        this.messageInput.style.height = 'auto';
+        
+        // Show typing indicator
+        this.showTyping();
+        
+        // Call AI API
+        try {
+          const response = await fetch('/ai-chat/', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRFToken': this.getCSRFToken()
+            },
+            body: JSON.stringify({
+              message: text,
+              type: this.currentMode
+            })
+          });
+          
+          const data = await response.json();
+          this.hideTyping();
+          
+          if (data.error) {
+            throw new Error(data.error);
+          }
+          
+          // Xóa markdown trước khi hiển thị
+          const cleanResponse = this.removeMarkdownSyntax(data.response);
+          this.addMessage(cleanResponse, 'ai', data.provider);
+          this.saveToHistory(text, cleanResponse);
+          
+        } catch (error) {
+          this.hideTyping();
+          this.addMessage('❌ Xin lỗi, đã có lỗi xảy ra: ' + error.message, 'ai');
+        }
+      }
+
+      addMessage(content, sender, provider = null) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message from-${sender}`;
+        
+        const avatar = sender === 'ai' 
+          ? '<div class="avatar ai"><i class="fas fa-robot"></i></div>'
+          : '<div class="avatar user"><i class="fas fa-user"></i></div>';
+        
+        const time = new Date().toLocaleTimeString('vi-VN', {hour: '2-digit', minute: '2-digit'});
+        const metaText = sender === 'ai' 
+          ? `<i class="fas fa-robot"></i> AI${provider ? ' • ' + provider : ''} • ${time}`
+          : `<i class="fas fa-user"></i> Bạn • ${time}`;
+        
+        const actions = sender === 'ai' ? `
+          <div class="message-actions">
+            <button onclick="app.copyMessage(this)"><i class="fas fa-copy"></i> Sao chép</button>
+          </div>
+        ` : '';
+        
+        messageDiv.innerHTML = `
+          ${avatar}
+          <div class="message-content">
+            <div class="message-bubble">${this.escapeHtml(content)}</div>
+            <div class="message-meta">${metaText}</div>
+            ${actions}
+          </div>
+        `;
+        
+        this.messagesArea.appendChild(messageDiv);
+        this.messagesArea.scrollTop = this.messagesArea.scrollHeight;
+        
+        this.messages.push({content, sender, time, provider});
+      }
+
+      showTyping() {
+        const typingDiv = document.createElement('div');
+        typingDiv.className = 'message from-ai';
+        typingDiv.id = 'typingIndicator';
+        typingDiv.innerHTML = `
+          <div class="avatar ai"><i class="fas fa-robot"></i></div>
+          <div class="message-content">
+            <div class="message-bubble">
+              <div class="typing-indicator">
+                <span></span><span></span><span></span>
+              </div>
+            </div>
+          </div>
+        `;
+        this.messagesArea.appendChild(typingDiv);
+        this.messagesArea.scrollTop = this.messagesArea.scrollHeight;
+      }
+
+      hideTyping() {
+        const typing = document.getElementById('typingIndicator');
+        if (typing) typing.remove();
+      }
+
+      async handleFileUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        
+        const allowedTypes = ['.pdf', '.doc', '.docx'];
+        const fileExt = '.' + file.name.split('.').pop().toLowerCase();
+        
+        if (!allowedTypes.includes(fileExt)) {
+          this.showNotification('Chỉ hỗ trợ file PDF, DOC, DOCX', 'error');
+          this.fileInput.value = '';
+          return;
+        }
+        
+        if (file.size > 10 * 1024 * 1024) {
+          this.showNotification('File quá lớn (max 10MB)', 'error');
+          this.fileInput.value = '';
+          return;
+        }
+        
+        this.addMessage(`📎 Đã upload: ${file.name} (${(file.size/1024).toFixed(1)} KB)`, 'user');
+        this.showTyping();
+        
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        try {
+          const response = await fetch('/analyze-document/', {
+            method: 'POST',
+            body: formData
+          });
+          
+          const data = await response.json();
+          this.hideTyping();
+          
+          if (data.error) {
+            throw new Error(data.error);
+          }
+          
+          // Xóa markdown từ summary và ai_analysis
+          const cleanSummary = this.removeMarkdownSyntax(data.summary || '');
+          const cleanAnalysis = this.removeMarkdownSyntax(data.ai_analysis || '');
+          
+          const result = `📄 Phân tích: "${data.file_name}"\n\n` +
+            `📊 ${data.word_count} từ • ${data.page_count} trang • ${data.language}\n\n` +
+            `📝 Tóm tắt:\n${cleanSummary}\n\n` +
+            `🔍 Phân tích chi tiết:\n${cleanAnalysis}`;
+          
+          this.addMessage(result, 'ai');
+          this.saveToHistory(`Upload: ${file.name}`, result);
+          
+          // Lưu thông tin file để có thể hỏi về nó sau
+          this.currentDocument = {
+            fileName: data.file_name,
+            summary: cleanSummary,
+            analysis: cleanAnalysis,
+            wordCount: data.word_count,
+            pageCount: data.page_count,
+            language: data.language
+          };
+          
+          // Hiển thị badge
+          this.showDocumentBadge();
+          
+        } catch (error) {
+          this.hideTyping();
+          this.addMessage('❌ Lỗi phân tích file: ' + error.message, 'ai');
+        }
+        
+        this.fileInput.value = '';
+      }
+
+      saveToHistory(question, answer) {
+        const item = {
+          id: Date.now(),
+          question: question.substring(0, 80),
+          answer: answer.substring(0, 150),
+          time: new Date().toLocaleString('vi-VN'),
+          mode: this.currentMode
+        };
+        
+        this.chatHistory.unshift(item);
+        if (this.chatHistory.length > 50) {
+          this.chatHistory = this.chatHistory.slice(0, 50);
+        }
+        
+        localStorage.setItem('chatHistory', JSON.stringify(this.chatHistory));
+        this.loadHistory();
+      }
+
+      loadHistory() {
+        if (this.chatHistory.length === 0) {
+          this.historyList.innerHTML = '<div style="text-align:center;color:var(--muted);padding:20px;font-size:13px">Chưa có lịch sử</div>';
+          return;
+        }
+        
+        this.historyList.innerHTML = this.chatHistory.slice(0, 20).map(item => `
+          <div class="history-item" onclick="app.loadHistoryItem(${item.id})">
+            <div class="history-item-title">${this.escapeHtml(item.question)}</div>
+            <div class="history-item-time">${item.time}</div>
+          </div>
+        `).join('');
+      }
+
+      loadHistoryItem(id) {
+        const item = this.chatHistory.find(h => h.id === id);
+        if (!item) return;
+        
+        this.addMessage(item.question, 'user');
+        this.addMessage(item.answer, 'ai');
+        this.showNotification('✅ Đã tải lịch sử');
+      }
+
+      newChat() {
+        if (this.messages.length > 1) {
+          if (!confirm('Bạn có chắc muốn bắt đầu cuộc trò chuyện mới?')) return;
+        }
+        
+        this.messages = [];
+        this.messagesArea.innerHTML = `
+          <div class="message from-ai">
+            <div class="avatar ai"><i class="fas fa-robot"></i></div>
+            <div class="message-content">
+              <div class="message-bubble">
+                ✨ Cuộc trò chuyện mới đã bắt đầu! Tôi sẵn sàng hỗ trợ bạn.
+              </div>
+              <div class="message-meta">
+                <i class="fas fa-robot"></i> AI • Vừa xong
+              </div>
+            </div>
+          </div>
+        `;
+        this.showNotification('✅ Đã bắt đầu cuộc trò chuyện mới');
+      }
+
+      clearChat() {
+        if (this.messages.length <= 1) return;
+        if (!confirm('Bạn có chắc muốn xóa toàn bộ cuộc trò chuyện?')) return;
+        this.newChat();
+      }
+
+      exportChat() {
+        if (this.messages.length <= 1) {
+          this.showNotification('Không có nội dung để xuất', 'error');
+          return;
+        }
+        
+        let text = '=== CUỘC TRÒ CHUYỆN VỚI AI (ChatGPT Style) ===\n\n';
+        text += `Xuất lúc: ${new Date().toLocaleString('vi-VN')}\n`;
+        text += `Tổng số tin nhắn: ${this.messages.length}\n\n`;
+        text += '='.repeat(60) + '\n\n';
+        
+        this.messages.forEach((msg, i) => {
+          const sender = msg.sender === 'ai' ? '🤖 AI' : '👤 BẠN';
+          text += `${sender} (${msg.time}):\n${msg.content}\n\n`;
+        });
+        
+        const blob = new Blob([text], {type: 'text/plain;charset=utf-8'});
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `chat-gpt-style-${new Date().toISOString().split('T')[0]}.txt`;
+        link.click();
+        
+        this.showNotification('✅ Đã xuất cuộc trò chuyện');
+      }
+
+      copyMessage(btn) {
+        const bubble = btn.closest('.message-content').querySelector('.message-bubble');
+        const text = bubble.textContent.trim();
+        navigator.clipboard.writeText(text).then(() => {
+          this.showNotification('✅ Đã sao chép');
+          btn.innerHTML = '<i class="fas fa-check"></i> Đã sao chép';
+          setTimeout(() => {
+            btn.innerHTML = '<i class="fas fa-copy"></i> Sao chép';
+          }, 2000);
+        }).catch(() => {
+          this.showNotification('❌ Lỗi sao chép', 'error');
+        });
+      }
+
+      escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML.replace(/\n/g, '<br>');
+      }
+
+      showNotification(message, type = 'success') {
+        const notif = document.createElement('div');
+        notif.className = 'notification';
+        const colors = {
+          error: '#ef4444',
+          info: '#3b82f6',
+          success: '#10b981'
+        };
+        notif.style.background = colors[type] || colors.success;
+        notif.textContent = message;
+        document.body.appendChild(notif);
+        
+        setTimeout(() => notif.remove(), 3000);
+      }
+
+      openSettings() {
+        // Đóng modal history nếu đang mở
+        document.getElementById('historyModal').classList.remove('active');
+        
+        document.getElementById('settingsModal').classList.add('active');
+        
+        // Load current settings
+        document.getElementById('aiProvider').value = this.settings.aiProvider;
+        document.getElementById('speechLang').value = this.settings.speechLang;
+        document.getElementById('theme').value = this.settings.theme;
+        document.getElementById('openaiKey').value = this.settings.openaiKey;
+        document.getElementById('continuousToggle').classList.toggle('active', this.settings.continuous);
+        document.getElementById('autoSendToggle').classList.toggle('active', this.settings.autoSend);
+      }
+
+      closeSettings() {
+        document.getElementById('settingsModal').classList.remove('active');
+      }
+
+      saveSettings() {
+        this.settings = {
+          aiProvider: document.getElementById('aiProvider').value,
+          speechLang: document.getElementById('speechLang').value,
+          continuous: document.getElementById('continuousToggle').classList.contains('active'),
+          autoSend: document.getElementById('autoSendToggle').classList.contains('active'),
+          theme: document.getElementById('theme').value,
+          openaiKey: document.getElementById('openaiKey').value
+        };
+        
+        localStorage.setItem('chatSettings', JSON.stringify(this.settings));
+        this.applySettings();
+        this.closeSettings();
+        this.showNotification('✅ Đã lưu cài đặt');
+        
+        // Reinit speech recognition with new settings
+        if (this.recognition) {
+          this.recognition.continuous = this.settings.continuous;
+          this.recognition.lang = this.settings.speechLang;
+        }
+      }
+
+      applySettings() {
+        // Apply theme
+        const themes = {
+          dark: {bg: '#0f1724', panel: '#1a1f2e', sidebar: '#0b1220'},
+          darker: {bg: '#000000', panel: '#0a0a0a', sidebar: '#050505'},
+          blue: {bg: '#0c1929', panel: '#152336', sidebar: '#081420'}
+        };
+        
+        const theme = themes[this.settings.theme] || themes.dark;
+        document.documentElement.style.setProperty('--bg', theme.bg);
+        document.documentElement.style.setProperty('--panel', theme.panel);
+        document.documentElement.style.setProperty('--sidebar', theme.sidebar);
+      }
+
+      toggleContinuous() {
+        document.getElementById('continuousToggle').classList.toggle('active');
+      }
+
+      toggleAutoSend() {
+        document.getElementById('autoSendToggle').classList.toggle('active');
+      }
+
+      // ========== CHỨC NĂNG BỔ SUNG ==========
+
+      // Sửa dấu câu bằng AI hoặc cục bộ
+      async fixPunctuation() {
+        const text = this.messageInput.value.trim();
+        if (!text) {
+          this.showNotification('Không có văn bản để sửa dấu câu', 'error');
+          return;
+        }
+
+        this.showNotification('Đang sửa dấu câu...');
+        try {
+          const response = await fetch('/ai-chat/', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRFToken': this.getCSRFToken()
+            },
+            body: JSON.stringify({ message: text, type: 'punctuation' })
+          });
+          
+          const data = await response.json();
+          if (data.response) {
+            const fixed = this.removeMarkdownSyntax(data.response.trim());
+            this.messageInput.value = fixed;
+            this.showNotification('✅ Đã sửa dấu câu bằng AI');
+          } else {
+            throw new Error('No response from AI');
+          }
+        } catch (error) {
+          console.error('AI punctuation error:', error);
+          const localFixed = this.addAutoPunctuation(text);
+          this.messageInput.value = localFixed;
+          this.showNotification('⚠️ Dùng sửa dấu câu cục bộ', 'warning');
+        }
+      }
+
+      // Sửa dấu câu cục bộ
+      addAutoPunctuation(text) {
+        if (!text) return text;
+        let processed = text.replace(/\s+/g, ' ').trim();
+        processed = processed.replace(/\s+([\.,\!\?])/g, '$1');
+        
+        if (processed.length > 20 && !/[\.\!\?]$/.test(processed)) {
+          if (/\b(ai|gì|đâu|khi nào|thế nào|tại sao|vì sao|bao nhiêu|có phải không|sao)\b/gi.test(processed)) {
+            processed += '?';
+          } else {
+            processed += '.';
+          }
+        }
+        
+        processed = processed.replace(/([\.\!\?])\s+([a-zà-ỹ])/gi, (m, p1, p2) => p1 + ' ' + p2.toUpperCase());
+        if (processed.length > 0) {
+          processed = processed.charAt(0).toUpperCase() + processed.slice(1);
+        }
+        return processed;
+      }
+
+      // Remove Markdown syntax
+      removeMarkdownSyntax(text) {
+        if (!text) return '';
+        let cleaned = text;
+        
+        // 1. Xóa tất cả dấu sao ** và * (bold/italic)
+        cleaned = cleaned.replace(/\*\*\*/g, '');  // Bold + Italic
+        cleaned = cleaned.replace(/\*\*/g, '');    // Bold
+        cleaned = cleaned.replace(/\*/g, '');      // Italic hoặc bullet
+        
+        // 2. Xóa tất cả dấu # (headings) ở đầu dòng và trong text
+        cleaned = cleaned.replace(/^#{1,6}\s+/gm, '');  // Đầu dòng
+        cleaned = cleaned.replace(/\s*#{1,6}\s*/g, ' '); // Trong text
+        cleaned = cleaned.replace(/#/g, '');             // Còn lại
+        
+        // 3. Xóa gạch dưới __ và _ (bold/italic)
+        cleaned = cleaned.replace(/___/g, '');
+        cleaned = cleaned.replace(/__/g, '');
+        cleaned = cleaned.replace(/_/g, '');
+        
+        // 4. Xóa code blocks ``` và inline code `
+        cleaned = cleaned.replace(/```[\s\S]*?```/g, '');  // Code blocks
+        cleaned = cleaned.replace(/`([^`]+)`/g, '$1');     // Inline code
+        cleaned = cleaned.replace(/`/g, '');               // Còn lại
+        
+        // 5. Xóa strikethrough ~~
+        cleaned = cleaned.replace(/~~/g, '');
+        cleaned = cleaned.replace(/~/g, '');
+        
+        // 6. Xóa links [text](url) → giữ lại text
+        cleaned = cleaned.replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1');
+        
+        // 7. Xóa images ![alt](url) → giữ lại alt text
+        cleaned = cleaned.replace(/!\[([^\]]*)\]\([^\)]+\)/g, '$1');
+        
+        // 8. Xóa blockquotes >
+        cleaned = cleaned.replace(/^>\s+/gm, '');
+        cleaned = cleaned.replace(/>/g, '');
+        
+        // 9. Xóa horizontal rules --- hoặc ***
+        cleaned = cleaned.replace(/^[\-\*]{3,}$/gm, '');
+        
+        // 10. Xóa list markers ở đầu dòng (-, +, *, 1., 2., etc)
+        cleaned = cleaned.replace(/^\s*[\-\+\*]\s+/gm, '');
+        cleaned = cleaned.replace(/^\s*\d+\.\s+/gm, '');
+        
+        // 11. Làm sạch khoảng trắng thừa
+        cleaned = cleaned.replace(/\n{3,}/g, '\n\n');  // Giới hạn xuống dòng
+        cleaned = cleaned.replace(/  +/g, ' ');         // Nhiều space → 1 space
+        cleaned = cleaned.trim();
+        
+        return cleaned;
+      }
+
+      // ========== QUẢN LÝ FILE UPLOAD ==========
+
+      // Hiển thị badge khi có file
+      showDocumentBadge() {
+        if (!this.currentDocument) return;
+        
+        const badge = document.getElementById('documentBadge');
+        const nameEl = document.getElementById('documentName');
+        
+        if (badge && nameEl) {
+          nameEl.textContent = this.currentDocument.fileName;
+          badge.style.display = 'block';
+        }
+      }
+
+      // Đóng file hiện tại
+      clearDocument() {
+        this.currentDocument = null;
+        const badge = document.getElementById('documentBadge');
+        if (badge) {
+          badge.style.display = 'none';
+        }
+        this.showNotification('✅ Đã đóng file');
+      }
+
+      // Hỏi câu hỏi về file đã upload
+      async askAboutDocument() {
+        if (!this.currentDocument) {
+          this.showNotification('Chưa có file nào được upload', 'error');
+          return;
+        }
+
+        const question = this.messageInput.value.trim();
+        if (!question) {
+          this.showNotification('Vui lòng nhập câu hỏi về file', 'warning');
+          return;
+        }
+
+        // Tạo context từ file
+        const context = `Tôi có một file "${this.currentDocument.fileName}" với thông tin sau:\n\n` +
+          `📊 Thống kê: ${this.currentDocument.wordCount} từ, ${this.currentDocument.pageCount} trang, ngôn ngữ ${this.currentDocument.language}\n\n` +
+          `📝 Tóm tắt:\n${this.currentDocument.summary}\n\n` +
+          `🔍 Phân tích:\n${this.currentDocument.analysis}\n\n` +
+          `❓ Câu hỏi của tôi: ${question}`;
+
+        // Gửi câu hỏi
+        this.addMessage(question, 'user');
+        this.messageInput.value = '';
+        this.showTyping();
+
+        try {
+          const response = await fetch('/ai-chat/', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRFToken': this.getCSRFToken()
+            },
+            body: JSON.stringify({ 
+              message: context,
+              type: 'question',
+              provider: this.settings.aiProvider,
+              api_key: this.settings.openaiKey
+            })
+          });
+
+          const data = await response.json();
+          this.hideTyping();
+
+          if (data.response) {
+            // Xóa markdown trước khi hiển thị
+            const cleanAnswer = this.removeMarkdownSyntax(data.response);
+            this.addMessage(cleanAnswer, 'ai');
+            this.saveToHistory(question, cleanAnswer);
+          } else {
+            throw new Error(data.error || 'Không có phản hồi từ AI');
+          }
+        } catch (error) {
+          this.hideTyping();
+          this.addMessage('❌ Lỗi: ' + error.message, 'ai');
+        }
+      }
+
+      // Get CSRF Token
+      getCSRFToken() {
+        const name = 'csrftoken';
+        const value = document.cookie.split(';').map(c => c.trim()).find(c => c.startsWith(name + '='));
+        return value ? decodeURIComponent(value.split('=')[1]) : '';
+      }
+
+      // Mở modal lịch sử chi tiết
+      openHistory() {
+        // Đóng modal settings nếu đang mở
+        document.getElementById('settingsModal').classList.remove('active');
+        
+        const modal = document.getElementById('historyModal');
+        if (!modal) {
+          this.showNotification('Modal lịch sử chưa được tạo', 'error');
+          return;
+        }
+        
+        const container = document.getElementById('historyListDetailed');
+        if (!container) return;
+        
+        if (this.chatHistory.length === 0) {
+          container.innerHTML = '<div style="text-align:center;color:var(--muted);padding:20px">Chưa có lịch sử</div>';
+        } else {
+          container.innerHTML = this.chatHistory.map((h, idx) => `
+            <div style="background:rgba(255,255,255,0.03);padding:12px;border-radius:8px;margin-bottom:10px">
+              <div style="font-weight:600;margin-bottom:6px">${this.escapeHtml(h.question || '...')}</div>
+              <div style="color:var(--muted);font-size:12px;margin-bottom:8px">${h.time || ''}</div>
+              <div style="white-space:pre-wrap;font-size:14px;line-height:1.5">${this.escapeHtml(h.answer || '...')}</div>
+              <div style="margin-top:10px;display:flex;gap:8px;justify-content:flex-end">
+                <button class="modal-btn secondary" onclick="app.viewHistory('${h.id}')">Xem</button>
+                <button class="modal-btn secondary" onclick="app.copyHistory('${h.id}')">Sao chép</button>
+                <button class="modal-btn secondary" onclick="app.deleteHistory('${h.id}')">Xóa</button>
+              </div>
+            </div>
+          `).join('');
+        }
+        
+        modal.classList.add('active');
+      }
+
+      // Xem lịch sử chi tiết
+      viewHistory(id) {
+        const item = this.chatHistory.find(h => h.id == id);
+        if (!item) {
+          this.showNotification('Không tìm thấy mục lịch sử', 'error');
+          return;
+        }
+        
+        document.getElementById('historyModal').classList.remove('active');
+        this.addMessage(item.question, 'user');
+        // Xóa markdown khi hiển thị lại từ lịch sử
+        const cleanAnswer = this.removeMarkdownSyntax(item.answer);
+        this.addMessage(cleanAnswer, 'ai');
+        this.showNotification('✅ Đã tải lịch sử');
+      }
+
+      // Sao chép lịch sử
+      copyHistory(id) {
+        const item = this.chatHistory.find(h => h.id == id);
+        if (!item) return;
+        
+        const text = `Câu hỏi:\n${item.question}\n\nTrả lời:\n${item.answer}`;
+        navigator.clipboard.writeText(text).then(() => {
+          this.showNotification('✅ Đã sao chép lịch sử');
+        }).catch(() => {
+          this.showNotification('❌ Lỗi sao chép', 'error');
+        });
+      }
+
+      // Xóa một mục lịch sử
+      deleteHistory(id) {
+        if (!confirm('Bạn có chắc muốn xóa mục này?')) return;
+        
+        this.chatHistory = this.chatHistory.filter(h => h.id != id);
+        localStorage.setItem('chatHistory', JSON.stringify(this.chatHistory));
+        localStorage.setItem('aiChatHistory', JSON.stringify(this.chatHistory));
+        this.loadHistory();
+        this.openHistory(); // Refresh modal
+        this.showNotification('✅ Đã xóa mục lịch sử');
+      }
+
+      // Xóa toàn bộ lịch sử
+      clearAllHistory() {
+        if (!confirm('Bạn có chắc muốn xóa toàn bộ lịch sử?')) return;
+        
+        this.chatHistory = [];
+        localStorage.setItem('chatHistory', JSON.stringify(this.chatHistory));
+        localStorage.setItem('aiChatHistory', JSON.stringify(this.chatHistory));
+        this.loadHistory();
+        document.getElementById('historyModal').classList.remove('active');
+        this.showNotification('✅ Đã xóa toàn bộ lịch sử');
+      }
+
+      // Xuất lịch sử ra file
+      exportHistory() {
+        if (!this.chatHistory || this.chatHistory.length === 0) {
+          this.showNotification('Không có lịch sử để xuất', 'error');
+          return;
+        }
+        
+        let text = '=== LỊCH SỬ TRÒ CHUYỆN VỚI AI ===\n\n';
+        text += `Xuất ngày: ${new Date().toLocaleString('vi-VN')}\n`;
+        text += `Tổng số: ${this.chatHistory.length} mục\n\n`;
+        text += '='.repeat(60) + '\n\n';
+        
+        this.chatHistory.forEach((h, i) => {
+          text += `${i + 1}. ${h.time || 'N/A'}\n`;
+          text += `Câu hỏi: ${h.question}\n`;
+          text += `Trả lời: ${h.answer}\n\n`;
+          text += '='.repeat(60) + '\n\n';
+        });
+        
+        const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `lich-su-${new Date().toISOString().split('T')[0]}.txt`;
+        link.click();
+        
+        this.showNotification('✅ Đã xuất lịch sử');
+      }
+
+      // Voice command processing
+      processVoiceCommands(text) {
+        const t = text.toLowerCase().trim();
+        
+        if (t.includes('gửi cho ai') || t.includes('hỏi ai')) {
+          setTimeout(() => this.sendMessage(), 300);
+          return true;
+        }
+        
+        if (t.includes('tóm tắt')) {
+          setTimeout(() => this.setMode('summarize'), 300);
+          return true;
+        }
+        
+        if (t.includes('dịch sang tiếng anh') || t.includes('dịch ra tiếng anh')) {
+          setTimeout(() => this.setMode('translate'), 300);
+          return true;
+        }
+        
+        if (t.includes('cải thiện')) {
+          setTimeout(() => this.setMode('improve'), 300);
+          return true;
+        }
+        
+        if (t.includes('xóa lịch sử')) {
+          setTimeout(() => this.clearAllHistory(), 300);
+          return true;
+        }
+        
+        if (t.includes('xóa tất cả') || t.includes('xóa hết')) {
+          setTimeout(() => this.clearChat(), 300);
+          return true;
+        }
+        
+        return false;
+      }
+
+      // Whisper recording fallback
+      async startWhisperRecording() {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          this.mediaRecorder = new MediaRecorder(stream);
+          this.audioChunks = [];
+
+          this.mediaRecorder.ondataavailable = (e) => {
+            this.audioChunks.push(e.data);
+          };
+
+          this.mediaRecorder.onstop = async () => {
+            const blob = new Blob(this.audioChunks, { type: 'audio/webm' });
+            await this.sendToWhisper(blob);
+            stream.getTracks().forEach(t => t.stop());
+          };
+
+          this.mediaRecorder.start();
+          this.isRecording = true;
+          this.micBtn.classList.add('recording');
+          this.micBtn.innerHTML = '<i class="fas fa-stop"></i>';
+          this.showNotification('🎤 Đang ghi âm với Whisper...', 'info');
+        } catch (error) {
+          console.error('Whisper recording error:', error);
+          this.showNotification('Không thể truy cập microphone', 'error');
+        }
+      }
+
+      // Send audio to Whisper API
+      async sendToWhisper(audioBlob) {
+        this.showNotification('Đang gửi tới Whisper API...', 'info');
+        
+        try {
+          const formData = new FormData();
+          formData.append('audio', audioBlob, 'recording.webm');
+          formData.append('language', this.settings.speechLang || 'vi-VN');
+
+          const response = await fetch('/whisper-transcribe/', {
+            method: 'POST',
+            body: formData
+          });
+
+          const data = await response.json();
+          
+          if (data.transcription) {
+            this.messageInput.value = (this.messageInput.value + ' ' + data.transcription).trim();
+            this.showNotification('✅ Whisper: Nhận dạng thành công');
+            
+            if (this.settings.autoSend) {
+              setTimeout(() => this.sendMessage(), 500);
+            }
+          } else if (data.error) {
+            this.showNotification('⚠️ ' + data.error, 'warning');
+            this.messageInput.value += ' [Demo transcription]';
+          }
+        } catch (error) {
+          console.error('Whisper API error:', error);
+          this.showNotification('Lỗi kết nối Whisper API', 'error');
+          this.messageInput.value += ' [Demo transcription]';
+        } finally {
+          this.isRecording = false;
+          this.micBtn.classList.remove('recording');
+          this.micBtn.innerHTML = '<i class="fas fa-microphone"></i>';
+        }
+      }
+
+      // Save/Share functions
+      saveToFile() {
+        const text = this.messageInput.value.trim();
+        if (!text) {
+          this.showNotification('Không có nội dung để lưu', 'error');
+          return;
+        }
+        
+        const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `text-${new Date().toISOString().split('T')[0]}.txt`;
+        link.click();
+        this.showNotification('✅ Đã lưu file');
+      }
+
+      shareText() {
+        const text = this.messageInput.value.trim();
+        if (!text) {
+          this.showNotification('Không có nội dung để chia sẻ', 'error');
+          return;
+        }
+        
+        if (navigator.share) {
+          navigator.share({ title: 'AI Chat Text', text })
+            .then(() => this.showNotification('✅ Đã chia sẻ'))
+            .catch(() => this.copyToClipboard(text));
+        } else {
+          this.copyToClipboard(text);
+        }
+      }
+
+      copyToClipboard(text) {
+        navigator.clipboard.writeText(text)
+          .then(() => this.showNotification('✅ Đã sao chép'))
+          .catch(() => this.showNotification('❌ Lỗi sao chép', 'error'));
+      }
+    }
+
+    // Initialize app
+    let app;
+    window.addEventListener('DOMContentLoaded', () => {
+      app = new AIAssistant();
+      console.log('✅ AI Assistant ready (ChatGPT Style)');
+    });
+  </script>
+</body>
+</html>
